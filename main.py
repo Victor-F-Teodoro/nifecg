@@ -1,6 +1,8 @@
 import wfdb
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import scale
+from scipy import signal
 
 from preprocessing import PreprocessingBlock
 from bss import IcaBlock, PcaBlock
@@ -54,18 +56,25 @@ def create_epochs(start, window, sig):
 zs = []
 stored_qrs_epochs = []
 stored_epoch_indexes = []
-for thissig, thisqrs in zip(prep_sig.T, qrs1_sig.T):
 
+for thissig in prep_sig.T:
     ### qrs epoch decomposition ###
-    qrs_indexes = np.where(thisqrs != 0)[0]
+    qrs_indexes = np.where(qrs1_sig[:,0] != 0)[0]
     qrs_window = int(300e-3 * fs)  # sampling points inside a 100ms window
     qrs_shift = int(100e-3 * fs)
     qrs_epochs, epoch_indexes = create_epochs(qrs_indexes-qrs_shift, qrs_window, thissig)
     zs.append(qrs_epochs)
     stored_qrs_epochs.append(qrs_epochs)
     stored_epoch_indexes.append(epoch_indexes)
-z = np.hstack(zs)
 
+temp = np.hstack(zs)
+z = np.zeros_like(temp)
+_, M4 = z.shape
+M = M4//4
+z[:, ::4] = temp[:, :M]
+z[:, 1::4] = temp[:, M:2*M]
+z[:, 2::4] = temp[:, 2*M:3*M]
+z[:, 3::4] = temp[:, 3*M:4*M]
 
 ### PCR ###
 block_3 = PcaBlock()
@@ -81,8 +90,6 @@ for qrs_epochs, epoch_indexes in zip(stored_qrs_epochs, stored_epoch_indexes):
         qrs_complex = fsig[idx,i]
         fsig[idx,i] = qrs_complex - pcr.predict(qrs_complex.reshape(1,-1))
     i += 1
-
-
 
 # fetal (secondary) qrs detection (it's used neurokits' qrs detection algorithm)
 block_4 = SecondaryQrsBlock()

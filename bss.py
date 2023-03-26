@@ -1,11 +1,9 @@
 from sklearn.decomposition import FastICA, PCA
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import RobustScaler
 
 from generic import Block
-import wfdb
-from wfdb import processing
 
 class IcaBlock(Block):
 
@@ -38,6 +36,7 @@ class IcaBlock(Block):
 		return X_transformed, ts
 
 class PcaBlock(Block):
+	standarize = False
 
 	def forward(self, sig, ts):
 		"""
@@ -55,8 +54,10 @@ class PcaBlock(Block):
 				treated signal timestamps
 		"""
 
-		transformer = make_pipeline(PCA(n_components=3), LinearRegression())
+		transformer = make_pipeline(PCA(n_components=10), LinearRegression())
+		if self.standarize:
+			transformer = make_pipeline(RobustScaler(), PCA(n_components=10), LinearRegression())
+		
 		X_transformed = transformer.fit(sig,sig)
-
 		
 		return X_transformed, ts
