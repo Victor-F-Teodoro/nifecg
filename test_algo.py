@@ -52,14 +52,7 @@ for sample in sample_names:
         stored_qrs_epochs.append(qrs_epochs)
         stored_epoch_indexes.append(epoch_indexes)
 
-    temp = np.hstack(zs)
-    z = np.zeros_like(temp)
-    _, M4 = z.shape
-    M = M4//4
-    z[:, ::4] = temp[:, :M]
-    z[:, 1::4] = temp[:, M:2*M]
-    z[:, 2::4] = temp[:, 2*M:3*M]
-    z[:, 3::4] = temp[:, 3*M:4*M]
+    z = np.hstack(zs)
 
     ### PCR ###
     block_3 = PcaBlock()
