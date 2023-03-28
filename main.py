@@ -9,7 +9,7 @@ from bss import IcaBlock, PcaBlock
 from qrs import PrimaryQrsBlock, SecondaryQrsBlock
 from compare import CompareBlock
 
-sample = "a01"
+sample = "a32"
 record = wfdb.rdrecord(f"samples/{sample}")
 truth_idxs = wfdb.rdann(f"samples/{sample}","fqrs").sample
 
