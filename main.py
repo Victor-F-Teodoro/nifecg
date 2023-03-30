@@ -57,9 +57,9 @@ zs = []
 stored_qrs_epochs = []
 stored_epoch_indexes = []
 
-for thissig in prep_sig.T:
+for i, thissig in enumerate(prep_sig.T):
     ### qrs epoch decomposition ###
-    qrs_indexes = np.where(qrs1_sig[:,0] != 0)[0]
+    qrs_indexes = np.where(qrs1_sig[:,i] != 0)[0]
     qrs_window = int(300e-3 * fs)  # sampling points inside a 100ms window
     qrs_shift = int(100e-3 * fs)
     qrs_epochs, epoch_indexes = create_epochs(qrs_indexes-qrs_shift, qrs_window, thissig)
