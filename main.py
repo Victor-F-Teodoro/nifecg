@@ -9,7 +9,7 @@ from bss import IcaBlock, PcaBlock
 from qrs import PrimaryQrsBlock, SecondaryQrsBlock
 from compare import CompareBlock
 
-sample = "a32"
+sample = "a01"
 record = wfdb.rdrecord(f"samples/{sample}")
 truth_idxs = wfdb.rdann(f"samples/{sample}","fqrs").sample
 
@@ -118,8 +118,26 @@ block_5 = IcaBlock()
 ica_sig, ica_ts = block_5.forward(fsig, prep_ts)
 qrs3_sig, qrs3_ts = block_4.forward(ica_sig, ica_ts)
 
-# plotting all ICA channels
+# plotting all fetal channels
 plt.figure(3)
+fig = plt.gcf()
+fig.suptitle("fECG channels")
+i = 1
+for hr_sig, hr_ts, sig in zip(qrs2_sig, qrs2_ts, fsig.T):
+    plt.subplot(fsig.shape[-1],1,i)
+    plt.plot(fts, sig)
+    plt.plot(hr_ts, hr_sig, "rx")
+    plt.ylabel(f"amplitude ({unit[0]})")
+    plt.xlabel("time (s)")
+    plt.xlim((38,42))
+    i += 1
+
+
+
+# plotting all ICA channels
+plt.figure(4)
+fig = plt.gcf()
+fig.suptitle("ICA channels")
 i = 1
 for hr_sig, hr_ts, sig in zip(qrs3_sig, qrs3_ts, ica_sig.T):
     plt.subplot(ica_sig.shape[-1],1,i)
@@ -135,14 +153,14 @@ for hr_sig, hr_ts, sig in zip(qrs3_sig, qrs3_ts, ica_sig.T):
 block_6 = CompareBlock()
 (best_fsig, best_fqrs), best_ts = block_6.forward([fsig, ica_sig, qrs2_ts, qrs3_ts], fts)
 
-plt.figure(4)
+plt.figure(5)
 plt.plot(best_ts, best_fsig)
-plt.vlines(best_fqrs, ymin=0, ymax=max(best_fsig)*1.3, colors="green", linestyles="dashed")
-plt.plot(truth_ts, max(best_fsig)*np.ones_like(truth_ts), "rx")
+plt.vlines(truth_ts, ymin=0, ymax=max(best_fsig)*1.3, colors="green", linestyles="dashed")
+plt.plot(best_fqrs, max(best_fsig)*np.ones_like(best_fqrs), "rx")
 plt.title("Extracted Fetal Heart Rate")
 plt.ylabel(f"amplitude")
 plt.xlabel("time (s)")
 plt.xlim((38,42))
-plt.legend(["fECG","estimated fQRS","true fQRS"])
+plt.legend(["fECG","true fQRS","estimated fQRS",])
 
 plt.show()
