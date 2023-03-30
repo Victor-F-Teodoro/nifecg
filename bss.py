@@ -56,7 +56,7 @@ class PcaBlock(Block):
 
 		transformer = make_pipeline(PCA(n_components=10), LinearRegression())
 		if self.standarize:
-			transformer = make_pipeline(RobustScaler(), PCA(n_components=10), LinearRegression())
+			transformer = make_pipeline(RobustScaler(), PCA(n_components=3), LinearRegression())
 		
 		X_transformed = transformer.fit(sig,sig)
 		

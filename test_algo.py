@@ -114,9 +114,15 @@ for sample in sample_names:
     except Exception:
         scores.append(0)
 
+total_acc = np.mean(scores)
+
 plt.figure(figsize=(12,8), dpi=80)
 plt.bar(np.arange(len(scores)) + 1, scores)
 plt.ylabel("accuracy (%)")
 plt.xlabel("sample in the set-a")
 plt.title("algorithm performance")
+
+ax = plt.gca()
+ax.text(0.25,0.25, f"overall acc: {total_acc:.2f}", bbox=dict(facecolor='blue', alpha=0.5), horizontalalignment='center',
+     verticalalignment='center', transform=ax.transAxes)
 plt.show()
