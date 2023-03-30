@@ -9,7 +9,7 @@ from bss import IcaBlock, PcaBlock
 from qrs import PrimaryQrsBlock, SecondaryQrsBlock
 from compare import CompareBlock
 
-sample = "a01"
+sample = "a35"
 record = wfdb.rdrecord(f"samples/{sample}")
 truth_idxs = wfdb.rdann(f"samples/{sample}","fqrs").sample
 
@@ -31,6 +31,8 @@ qrs1_sig, qrs1_ts = block_2.forward(prep_sig, prep_ts)
 
 # plottingintermediate results
 plt.figure(1)
+fig = plt.gcf()
+fig.suptitle("Detected mQRS Complexes")
 i = 1
 for qrs, channel in zip(qrs1_sig.T, prep_sig.T):
     qrs_indexes = np.where(qrs)
@@ -40,7 +42,10 @@ for qrs, channel in zip(qrs1_sig.T, prep_sig.T):
     plt.plot(qrs_ts, qrs[qrs_indexes], 'rx')
     plt.plot(prep_ts, channel)    
     plt.xlim((38,42))
+    plt.ylabel(f"ampl. ({unit[0]})")
     i+=1
+ax = plt.gca()
+ax.set_xlabel("time (s)")
 
 # function for creating the qrs-complexes extracts
 def create_epochs(start, window, sig):
