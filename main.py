@@ -3,12 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import scale
 from scipy import signal
-
+from skimage.restoration import denoise_wavelet
+import neurokit2 as nk
 from preprocessing import PreprocessingBlock
 from bss import IcaBlock, PcaBlock
 from qrs import PrimaryQrsBlock, SecondaryQrsBlock
 from compare import CompareBlock
-
+from scipy.signal import kaiserord, lfilter, firwin, freqz
+res_a = []
+#for z in range(10,40):
+    
 sample = "a01"
 record = wfdb.rdrecord(f"samples/{sample}")
 truth_idxs = wfdb.rdann(f"samples/{sample}","fqrs").sample
@@ -28,7 +32,9 @@ prep_sig, prep_ts = block_0.forward(signals, ts)
 # mother (primary) qrs detection (its used gqrs for this task)
 block_2 = PrimaryQrsBlock(100, *adc_data)
 qrs1_sig, qrs1_ts = block_2.forward(prep_sig, prep_ts)
-
+ 
+np.savetxt('sig_mae.txt', prep_sig, delimiter=',')
+np.savetxt('qrs_mae.txt', qrs1_sig, delimiter=',')
 # plottingintermediate results
 plt.figure(1)
 i = 1
@@ -60,8 +66,8 @@ stored_epoch_indexes = []
 for thissig in prep_sig.T:
     ### qrs epoch decomposition ###
     qrs_indexes = np.where(qrs1_sig[:,0] != 0)[0]
-    qrs_window = int(300e-3 * fs)  # sampling points inside a 100ms window
-    qrs_shift = int(100e-3 * fs)
+    qrs_window = int(150e-3 * fs)  # sampling points inside a 100ms window
+    qrs_shift = int(50e-3 * fs)
     qrs_epochs, epoch_indexes = create_epochs(qrs_indexes-qrs_shift, qrs_window, thissig)
     zs.append(qrs_epochs)
     stored_qrs_epochs.append(qrs_epochs)
@@ -86,12 +92,12 @@ for qrs_epochs, epoch_indexes in zip(stored_qrs_epochs, stored_epoch_indexes):
 
 # fetal (secondary) qrs detection (it's used neurokits' qrs detection algorithm)
 block_4 = SecondaryQrsBlock()
-qrs2_sig, qrs2_ts = block_4.forward(fsig, prep_ts)
+qrs2_sig, qrs2_ts = block_4.forward(fsig, prep_ts, True)
 
 plt.figure(2)
 plt.subplot(3,1,1)
 plt.plot(prep_ts, prep_sig[:,0])
-plt.ylabel(f"amplitude ({unit[0]})")
+plt.ylabel("amplitude ({unit[0]})")
 plt.xlabel("time (s)")
 plt.xlim((38,42))
 plt.title("Original Channel")
@@ -116,7 +122,7 @@ plt.tight_layout()
 # from Behar 2016, running the results through an ICA block improves quality
 block_5 = IcaBlock()
 ica_sig, ica_ts = block_5.forward(fsig, prep_ts)
-qrs3_sig, qrs3_ts = block_4.forward(ica_sig, ica_ts)
+qrs3_sig, qrs3_ts = block_4.forward(ica_sig, ica_ts, False)
 
 # plotting all fetal channels
 plt.figure(3)
@@ -126,10 +132,10 @@ i = 1
 for hr_sig, hr_ts, sig in zip(qrs2_sig, qrs2_ts, fsig.T):
     plt.subplot(fsig.shape[-1],1,i)
     plt.plot(fts, sig)
-    plt.plot(hr_ts, hr_sig, "rx")
+    #plt.plot(hr_ts, hr_sig, "rx")
     plt.ylabel(f"amplitude ({unit[0]})")
     plt.xlabel("time (s)")
-    plt.xlim((38,42))
+    plt.xlim((20,60))
     i += 1
 
 
@@ -145,22 +151,78 @@ for hr_sig, hr_ts, sig in zip(qrs3_sig, qrs3_ts, ica_sig.T):
     plt.plot(hr_ts, hr_sig, "rx")
     plt.ylabel(f"amplitude ({unit[0]})")
     plt.xlabel("time (s)")
-    plt.xlim((38,42))
+    plt.xlim((30,60))
     i += 1
 
 # copying what Andreotti 2014 did, the best ICA channel will be the one
 # that better matches the fqrs from before the bss
 block_6 = CompareBlock()
 (best_fsig, best_fqrs), best_ts = block_6.forward([fsig, ica_sig, qrs2_ts, qrs3_ts], fts)
+"""
+#######################ENLEVER
+### FILTRES 2018
 
-plt.figure(5)
+sig_smooth = signal.savgol_filter(best_fsig, window_length=30, polyorder=4, mode='nearest')
+print(fs)
+
+#### FIR FILTER
+
+fs = 1/(fts[1]-fts[0])
+print(fs)
+# Define the filter specifications
+fs = fs    # Sampling frequency
+f1 = 3      # Lower cut-off frequency
+f2 = 35     # Upper cut-off frequency
+numtaps = 41  # Filter order (number of coefficients)
+nyq = 0.5 * fs
+
+# Compute the filter coefficients using Hamming window
+taps = signal.firwin(numtaps, [f1/nyq, f2/nyq], pass_zero=False, window='hamming')
+
+
+# Filter the signal using the FIR filter
+sig_smooth = signal.lfilter(taps, 1.0, sig_smooth)
+
+_, rpeaks_1 = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
+
+##### FILTRES 2019
+######################ENLEVER
+sig_smooth = denoise_wavelet(best_fsig, wavelet='db4', mode='soft', wavelet_levels=6, method='BayesShrink', rescale_sigma='True')
+_, rpeaks_2 = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
+"""
+plt.figure(6)
 plt.plot(best_ts, best_fsig)
 plt.vlines(truth_ts, ymin=0, ymax=max(best_fsig)*1.3, colors="green", linestyles="dashed")
 plt.plot(best_fqrs, max(best_fsig)*np.ones_like(best_fqrs), "rx")
+#plt.plot(rpeaks_1['ECG_R_Peaks']/1000, max(best_fsig)/2*np.ones_like(rpeaks_1['ECG_R_Peaks']), "rx")
+#plt.plot(rpeaks_2['ECG_R_Peaks']/1000, max(best_fsig)/3*np.ones_like(rpeaks_2['ECG_R_Peaks']), "rx")
 plt.title("Extracted Fetal Heart Rate")
 plt.ylabel(f"amplitude")
 plt.xlabel("time (s)")
-plt.xlim((38,42))
+plt.xlim((30,60))
 plt.legend(["fECG","true fQRS","estimated fQRS",])
 
 plt.show()
+
+#  sevitzky-golay smoothing filter
+
+"""
+fs = 1/(best_ts[1]-best_ts[0]) 
+new_sig = []
+new_ts = []
+_, rpeaks = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
+print(rpeaks)
+new_sig = sig_smooth[rpeaks["ECG_R_Peaks"]]
+new_ts = best_ts[rpeaks["ECG_R_Peaks"]]
+print(new_sig)
+"""
+'''
+plt.figure(6)
+plt.plot(new_sig, new_ts)
+#plt.vlines(truth_ts, ymin=0, ymax=max(sgf_sig)*1.3, colors="green", linestyles="dashed")
+plt.xlim((38,42))
+plt.show()
+
+print(new_sig)
+print(new_ts)
+'''

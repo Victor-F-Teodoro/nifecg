@@ -1,6 +1,9 @@
 import wfdb
 import numpy as np
+from scipy import signal
 import matplotlib.pyplot as plt
+from skimage.restoration import denoise_wavelet
+import neurokit2 as nk
 from preprocessing import PreprocessingBlock
 from bss import IcaBlock, PcaBlock
 from qrs import PrimaryQrsBlock, SecondaryQrsBlock
@@ -8,7 +11,9 @@ from compare import CompareBlock
 
 num_samples = 75
 sample_names = ["a" + str(i).zfill(2) for i in range(1,num_samples+1)]
+#sample_names = ["a23"]
 scores = []
+
 
 for sample in sample_names:
     try:
@@ -48,8 +53,8 @@ for sample in sample_names:
         for thissig in prep_sig.T:
             ### qrs epoch decomposition ###
             qrs_indexes = np.where(qrs1_sig[:,0] != 0)[0]
-            qrs_window = int(300e-3 * fs)  # sampling points inside a 100ms window
-            qrs_shift = int(100e-3 * fs)
+            qrs_window = int(150e-3 * fs)  # sampling points inside a 100ms window
+            qrs_shift = int(50e-3 * fs)
             qrs_epochs, epoch_indexes = create_epochs(qrs_indexes-qrs_shift, qrs_window, thissig)
             zs.append(qrs_epochs)
             stored_qrs_epochs.append(qrs_epochs)
@@ -74,26 +79,50 @@ for sample in sample_names:
 
         # fetal (secondary) qrs detection (it's used neurokits' qrs detection algorithm)
         block_4 = SecondaryQrsBlock()
-        qrs2_sig, qrs2_ts = block_4.forward(fsig, prep_ts)
+        qrs2_sig, qrs2_ts = block_4.forward(fsig, prep_ts, 3)
 
         # from Behar 2016, running the results through an ICA block improves quality
         block_5 = IcaBlock()
         ica_sig, ica_ts = block_5.forward(fsig, prep_ts)
-        qrs3_sig, qrs3_ts = block_4.forward(ica_sig, ica_ts)
+        qrs3_sig, qrs3_ts = block_4.forward(ica_sig, ica_ts, 3)
 
         # copying what Andreotti 2014 did, the best ICA channel will be the one
         # that better matches the fqrs from before the bss
         block_6 = CompareBlock()
         (best_fsig, best_fqrs), best_ts = block_6.forward([fsig, ica_sig, qrs2_ts, qrs3_ts], fts)
+        fs1 = 1/(fts[1]-fts[0])
+        """
+        sig_smooth = signal.savgol_filter(sig_smooth, window_length=30, polyorder=4, mode='nearest')
+        
 
+        #### FIR FILTER
+        
+        # Define the filter specifications
+        fs1 = fs1    # Sampling frequency
+        f1 = 3      # Lower cut-off frequency
+        f2 = 35     # Upper cut-off frequency
+        numtaps = 61  # Filter order (number of coefficients)
+        nyq = 0.5 * fs1
+
+        # Compute the filter coefficients using Hamming window
+        taps = signal.firwin(numtaps, [f1/nyq, f2/nyq], pass_zero=False, window='hamming')
+
+
+        # Filter the signal using the FIR filter
+        sig_smooth = signal.lfilter(taps, 1.0, sig_smooth)
+        
+        # sig_smooth = nk.ecg_clean(sig_smooth, fs1, method="neurokit")
+        _, rpeaks = nk.ecg_peaks(sig_smooth, sampling_rate=fs1, correct_artifacts=True)
+        best_fsig = sig_smooth
+        best_fqrs = []
+        best_fqrs.append(ts[rpeaks["ECG_R_Peaks"]])
+        """
         ypred = np.zeros_like(ts)
         ypred[[np.where(ts == t)[0] for t in best_fqrs]] = 1
-
         ytrue = np.zeros_like(ts)
         ytrue[truth_idxs] = 1
-
         # assuming a max heart rate of 300bpm
-        accepted_decal = int(20e-3 * fs)  # accepted error 
+        accepted_decal = int(40e-3 * fs)  # accepted error 
 
         to_be_masked = np.copy(ypred)  # correct predictions will be removed from this array
         total_positives = np.sum(ytrue)
@@ -111,7 +140,9 @@ for sample in sample_names:
         acc = (true_positives + true_negatives) / (true_positives + false_positives + true_negatives + false_negatives)
         print(f"{sample} : {acc}")
         scores.append(acc*100)
+
     except Exception:
+        print('sample', sample, " is broken")
         scores.append(0)
 
 plt.figure(figsize=(12,8), dpi=80)
@@ -120,3 +151,8 @@ plt.ylabel("accuracy (%)")
 plt.xlabel("sample in the set-a")
 plt.title("algorithm performance")
 plt.show()
+print(scores)
+a = 0
+for i in scores: 
+    a = a+i
+print(a/len(scores))

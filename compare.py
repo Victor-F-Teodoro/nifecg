@@ -24,12 +24,20 @@ class CompareBlock(Block):
 		"""
 
 		primary, secondary, primary_qrs, secondary_qrs = sig
-
-		corr_matrix = array([ [ max(correlate(x,y)) for x in secondary_qrs] for y in primary_qrs ])
-		best = argmax(corr_matrix)
-
-		m,n = corr_matrix.shape
-		i = best//m
-		j = best%n
-
-		return (secondary[:,j], secondary_qrs[j]), ts
+		#corr_matrix = array([ [ max(correlate(x,y)) for x in secondary_qrs] for y in primary_qrs ])
+		#best = argmax(corr_matrix)
+		k = 0
+		max_length = 0
+		for l in secondary_qrs:
+			##print("len l: ",len(l))
+			#print("len comp: ",len(secondary_qrs[k]))
+			if len(l)>max_length:
+				max_length = len(l)
+				o = k
+				
+			k = k+1
+		#m,n = corr_matrix.shape
+		#i = best//m
+		#j = best%n
+		#print("res:" ,len(secondary_qrs[j])-max_length)
+		return (secondary[:,o], secondary_qrs[o]), ts
