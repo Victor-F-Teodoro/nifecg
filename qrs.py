@@ -1,6 +1,8 @@
 from generic import Block
 from wfdb import processing
 from numpy import zeros_like
+from scipy import signal
+from skimage.restoration import denoise_wavelet
 from scipy.signal import find_peaks
 import neurokit2 as nk
 
@@ -63,7 +65,7 @@ class PrimaryQrsBlock(Block):
 
 class SecondaryQrsBlock(Block):
 	
-	def forward(self, sig, ts):
+	def forward(self, sig, ts, flag):
 		"""
 		method for treating the signal
 
@@ -82,8 +84,29 @@ class SecondaryQrsBlock(Block):
 		fs = 1/(ts[1]-ts[0]) 
 		new_sig = []
 		new_ts = []
+		
 		for chann in sig.T:
-			_, rpeaks = nk.ecg_peaks(chann, sampling_rate=fs)
+			if flag == 1:
+				chann = denoise_wavelet(chann, wavelet='coif5', mode='soft', wavelet_levels=6	, method='BayesShrink', rescale_sigma='True')
+			elif flag == 2:
+				chann = signal.savgol_filter(chann, window_length=30, polyorder=4, mode='mirror')
+				### FILTRES 2018
+
+				#### FIR FILTER
+				# Define the filter specifications
+				fs = fs    # Sampling frequency
+				f1 = 3      # Lower cut-off frequency
+				f2 = 35     # Upper cut-off frequency
+				numtaps = 10  # Filter order (number of coefficients)
+				nyq = 0.5 * fs
+
+				# Compute the filter coefficients using Hamming window
+				taps = signal.firwin(numtaps, [f1/nyq, f2/nyq], pass_zero=False, window='hamming')
+				# Filter the signal using the FIR filter
+				chann = signal.lfilter(taps, 1.0, chann)
+
+			_, rpeaks = nk.ecg_peaks(chann, sampling_rate=fs, method="rodrigues2021", correct_artifacts=True )
 			new_sig.append(chann[rpeaks["ECG_R_Peaks"]])
 			new_ts.append(ts[rpeaks["ECG_R_Peaks"]])
+		
 		return new_sig, new_ts
