@@ -158,38 +158,7 @@ for hr_sig, hr_ts, sig in zip(qrs3_sig, qrs3_ts, ica_sig.T):
 # that better matches the fqrs from before the bss
 block_6 = CompareBlock()
 (best_fsig, best_fqrs), best_ts = block_6.forward([fsig, ica_sig, qrs2_ts, qrs3_ts], fts)
-"""
-#######################ENLEVER
-### FILTRES 2018
 
-sig_smooth = signal.savgol_filter(best_fsig, window_length=30, polyorder=4, mode='nearest')
-print(fs)
-
-#### FIR FILTER
-
-fs = 1/(fts[1]-fts[0])
-print(fs)
-# Define the filter specifications
-fs = fs    # Sampling frequency
-f1 = 3      # Lower cut-off frequency
-f2 = 35     # Upper cut-off frequency
-numtaps = 41  # Filter order (number of coefficients)
-nyq = 0.5 * fs
-
-# Compute the filter coefficients using Hamming window
-taps = signal.firwin(numtaps, [f1/nyq, f2/nyq], pass_zero=False, window='hamming')
-
-
-# Filter the signal using the FIR filter
-sig_smooth = signal.lfilter(taps, 1.0, sig_smooth)
-
-_, rpeaks_1 = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
-
-##### FILTRES 2019
-######################ENLEVER
-sig_smooth = denoise_wavelet(best_fsig, wavelet='db4', mode='soft', wavelet_levels=6, method='BayesShrink', rescale_sigma='True')
-_, rpeaks_2 = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
-"""
 plt.figure(5)
 plt.plot(best_ts, best_fsig)
 plt.vlines(truth_ts, ymin=0, ymax=max(best_fsig)*1.3, colors="green", linestyles="dashed")
@@ -204,25 +173,3 @@ plt.legend(["fECG","true fQRS","estimated fQRS",])
 
 plt.show()
 
-#  sevitzky-golay smoothing filter
-
-"""
-fs = 1/(best_ts[1]-best_ts[0]) 
-new_sig = []
-new_ts = []
-_, rpeaks = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
-print(rpeaks)
-new_sig = sig_smooth[rpeaks["ECG_R_Peaks"]]
-new_ts = best_ts[rpeaks["ECG_R_Peaks"]]
-print(new_sig)
-"""
-'''
-plt.figure(6)
-plt.plot(new_sig, new_ts)
-#plt.vlines(truth_ts, ymin=0, ymax=max(sgf_sig)*1.3, colors="green", linestyles="dashed")
-plt.xlim((38,42))
-plt.show()
-
-print(new_sig)
-print(new_ts)
-'''
