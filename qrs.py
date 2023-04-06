@@ -87,7 +87,7 @@ class SecondaryQrsBlock(Block):
 		
 		for chann in sig.T:
 			if flag == 1:
-				chann = denoise_wavelet(chann, wavelet='coif5', mode='soft', wavelet_levels=6	, method='BayesShrink', rescale_sigma='True')
+				chann = denoise_wavelet(chann, wavelet='db10', mode='soft', wavelet_levels=10	, method='BayesShrink', rescale_sigma='True')
 			elif flag == 2:
 				chann = signal.savgol_filter(chann, window_length=30, polyorder=4, mode='mirror')
 				### FILTRES 2018
@@ -97,7 +97,7 @@ class SecondaryQrsBlock(Block):
 				fs = fs    # Sampling frequency
 				f1 = 3      # Lower cut-off frequency
 				f2 = 35     # Upper cut-off frequency
-				numtaps = 10  # Filter order (number of coefficients)
+				numtaps = 11  # Filter order (number of coefficients)
 				nyq = 0.5 * fs
 
 				# Compute the filter coefficients using Hamming window
@@ -105,7 +105,7 @@ class SecondaryQrsBlock(Block):
 				# Filter the signal using the FIR filter
 				chann = signal.lfilter(taps, 1.0, chann)
 
-			_, rpeaks = nk.ecg_peaks(chann, sampling_rate=fs, method="rodrigues2021", correct_artifacts=True )
+			_, rpeaks = nk.ecg_peaks(chann, sampling_rate=fs, correct_artifacts=True)
 			new_sig.append(chann[rpeaks["ECG_R_Peaks"]])
 			new_ts.append(ts[rpeaks["ECG_R_Peaks"]])
 		

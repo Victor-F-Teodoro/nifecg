@@ -1,6 +1,7 @@
 from scipy import signal
 from generic import Block
 import numpy as np
+from skimage.restoration import denoise_wavelet
 
 class PreprocessingBlock(Block):
 	
@@ -39,5 +40,5 @@ class PreprocessingBlock(Block):
 		sig = signal.filtfilt(b,a,sig, axis=0)
 		sig = signal.filtfilt(bs1,as1,sig, axis=0)
 		sig = signal.filtfilt(bs2,as2,sig, axis=0)
-		
+				
 		return sig, ts

@@ -92,7 +92,7 @@ for qrs_epochs, epoch_indexes in zip(stored_qrs_epochs, stored_epoch_indexes):
 
 # fetal (secondary) qrs detection (it's used neurokits' qrs detection algorithm)
 block_4 = SecondaryQrsBlock()
-qrs2_sig, qrs2_ts = block_4.forward(fsig, prep_ts, True)
+qrs2_sig, qrs2_ts = block_4.forward(fsig, prep_ts, 1)
 
 plt.figure(2)
 plt.subplot(3,1,1)
@@ -122,7 +122,7 @@ plt.tight_layout()
 # from Behar 2016, running the results through an ICA block improves quality
 block_5 = IcaBlock()
 ica_sig, ica_ts = block_5.forward(fsig, prep_ts)
-qrs3_sig, qrs3_ts = block_4.forward(ica_sig, ica_ts, False)
+qrs3_sig, qrs3_ts = block_4.forward(ica_sig, ica_ts, 4)
 
 # plotting all fetal channels
 plt.figure(3)
@@ -135,7 +135,7 @@ for hr_sig, hr_ts, sig in zip(qrs2_sig, qrs2_ts, fsig.T):
     #plt.plot(hr_ts, hr_sig, "rx")
     plt.ylabel(f"amplitude ({unit[0]})")
     plt.xlabel("time (s)")
-    plt.xlim((20,60))
+    plt.xlim((38,42))
     i += 1
 
 
@@ -151,7 +151,7 @@ for hr_sig, hr_ts, sig in zip(qrs3_sig, qrs3_ts, ica_sig.T):
     plt.plot(hr_ts, hr_sig, "rx")
     plt.ylabel(f"amplitude ({unit[0]})")
     plt.xlabel("time (s)")
-    plt.xlim((30,60))
+    plt.xlim((38,42))
     i += 1
 
 # copying what Andreotti 2014 did, the best ICA channel will be the one
@@ -190,7 +190,7 @@ _, rpeaks_1 = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
 sig_smooth = denoise_wavelet(best_fsig, wavelet='db4', mode='soft', wavelet_levels=6, method='BayesShrink', rescale_sigma='True')
 _, rpeaks_2 = nk.ecg_peaks(sig_smooth, sampling_rate=fs)
 """
-plt.figure(6)
+plt.figure(5)
 plt.plot(best_ts, best_fsig)
 plt.vlines(truth_ts, ymin=0, ymax=max(best_fsig)*1.3, colors="green", linestyles="dashed")
 plt.plot(best_fqrs, max(best_fsig)*np.ones_like(best_fqrs), "rx")
@@ -199,7 +199,7 @@ plt.plot(best_fqrs, max(best_fsig)*np.ones_like(best_fqrs), "rx")
 plt.title("Extracted Fetal Heart Rate")
 plt.ylabel(f"amplitude")
 plt.xlabel("time (s)")
-plt.xlim((30,60))
+plt.xlim((38,42))
 plt.legend(["fECG","true fQRS","estimated fQRS",])
 
 plt.show()
